@@ -21,11 +21,12 @@ type PostgresConfig struct {
 	Port     string `yaml:"port"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+	Database string `yaml:"database"`
 }
 
 func parseConfig(v *viper.Viper) (*Config, error) {
 	var config *Config
-	err := v.Unmarshal(config)
+	err := v.Unmarshal(&config)
 	if err != nil {
 		log.Printf("unable to decode struct, %v\n", err)
 	}
