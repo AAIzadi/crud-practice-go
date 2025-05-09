@@ -6,52 +6,41 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"testing"
 	"time"
 )
 
 func setupPostgresContainer(ctx context.Context, t *testing.T) (*pgxpool.Pool, func(), error) {
 
-	env := "test"
-	cfg, _ := appconfig.GetConfig(env)
+	cfg, _ := appconfig.GetConfig("test")
+	postgresConfig := cfg.Postgres
 
 	t.Helper()
 
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres",
-		ExposedPorts: []string{"5432/tcp"},
-		Env: map[string]string{
-			"POSTGRES_DB":       cfg.Postgres.Database,
-			"POSTGRES_USER":     cfg.Postgres.Username,
-			"POSTGRES_PASSWORD": cfg.Postgres.Password,
-		},
-		WaitingFor: wait.ForLog("database system is ready to accept connections").
-			WithOccurrence(2).
-			WithStartupTimeout(30 * time.Second),
-	}
+	ctr, err := postgres.Run(ctx, "postgres",
+		postgres.WithDatabase(postgresConfig.Database),
+		postgres.WithUsername(postgresConfig.Username),
+		postgres.WithPassword(postgresConfig.Password),
+		postgres.BasicWaitStrategies(),
+	)
 
-	pgContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to start container: %v", err)
-	}
+	testcontainers.CleanupContainer(t, ctr)
+	require.NoError(t, err)
 
-	host, err := pgContainer.Host(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get container host: %v", err)
-	}
+	connStr, err := ctr.ConnectionString(ctx, "sslmode=disable", "application_name=test")
+	require.NoError(t, err)
 
-	port, err := pgContainer.MappedPort(ctx, "5432")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get container port: %v", err)
-	}
-
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		cfg.Postgres.Username, cfg.Postgres.Password, host, port.Port(), cfg.Postgres.Database)
+	id, err := ctr.MappedPort(ctx, "5432/tcp")
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&application_name=test",
+		postgresConfig.Username,
+		postgresConfig.Password,
+		"localhost", id.Port(),
+		postgresConfig.Database),
+		connStr)
 
 	var pool *pgxpool.Pool
 	maxAttempts := 5
@@ -62,13 +51,13 @@ func setupPostgresContainer(ctx context.Context, t *testing.T) (*pgxpool.Pool, f
 		}
 		time.Sleep(time.Second * time.Duration(i+1))
 	}
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to database: %v", err)
-	}
+
+	require.NoError(t, err)
+	require.NotNil(t, pool)
 
 	cleanup := func() {
 		pool.Close()
-		pgContainer.Terminate(ctx)
+		ctr.Terminate(ctx)
 	}
 
 	return pool, cleanup, nil
