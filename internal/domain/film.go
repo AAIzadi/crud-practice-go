@@ -1,6 +1,8 @@
 package domain
 
-import "crud-practice-go/internal/repository"
+import (
+	"crud-practice-go/internal/search"
+)
 
 type Film struct {
 	FilmID          int      `json:"film_id"`
@@ -20,7 +22,12 @@ type Film struct {
 }
 
 type FilmRepository interface {
-	GetAll(param repository.PagingAndSorting) ([]Film, error)
-	GetById(id int) (film Film, err error)
-	//Create(film Film) error
+	GetAll(param search.PagingAndSorting) ([]Film, error)
+	GetById(id int) (film *Film, err error)
+	GetFilmsWithLanguage() ([]FilmWithLanguage, error)
+}
+
+type FilmWithLanguage struct {
+	Title        string
+	LanguageName string
 }

@@ -1,14 +1,14 @@
 package main
 
 import (
-	"crud-practice-go/internal/config"
+	appconfig "crud-practice-go/internal/config"
 	"fmt"
 )
 
 func main() {
 
 	environment := "local"
-	appConfig, _ := config.GetConfig(environment)
+	appConfig, _ := appconfig.GetConfig(environment)
 
-	fmt.Println(appConfig.Postgres.Port)
+	fmt.Println(appConfig)
 }

@@ -1,4 +1,4 @@
-package config
+package appconfig
 
 import (
 	"errors"
@@ -37,7 +37,7 @@ func localConfig(fileName string, fileType string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigType(fileType)
 	v.SetConfigName(fileName)
-	v.AddConfigPath("./config")
+	v.AddConfigPath("/Users/ali/Documents/Projects/go-sample/crud-practice-go/config")
 	v.AutomaticEnv()
 
 	err := v.ReadInConfig()
@@ -61,6 +61,10 @@ func getConfigPath(env string) string {
 	if env == "local" {
 		return "config-local"
 	}
+	if env == "test" {
+		return "config-test"
+	}
+
 	panic("no valid env")
 }
 

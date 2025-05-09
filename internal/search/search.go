@@ -1,4 +1,4 @@
-package repository
+package search
 
 type PagingAndSorting struct {
 	Limit     int

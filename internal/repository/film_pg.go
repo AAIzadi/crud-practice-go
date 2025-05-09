@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"crud-practice-go/internal/domain"
+	"crud-practice-go/internal/search"
 	"encoding/json"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,7 +16,7 @@ func NewFilmRepository(db *pgxpool.Pool) domain.FilmRepository {
 	return &filmPgRepository{db: db}
 }
 
-func (r *filmPgRepository) GetAll(param PagingAndSorting) ([]domain.Film, error) {
+func (r *filmPgRepository) GetAll(param search.PagingAndSorting) ([]domain.Film, error) {
 	ctx := context.Background()
 	rows, err := r.db.Query(ctx, `SELECT film_id, title, description, release_year, language_id,
         original_language_id, rental_duration, rental_rate, length, replacement_cost,
@@ -49,7 +50,7 @@ func (r *filmPgRepository) GetAll(param PagingAndSorting) ([]domain.Film, error)
 	return films, nil
 }
 
-func (r *filmPgRepository) GetById(id int) (domain.Film, error) {
+func (r *filmPgRepository) GetById(id int) (*domain.Film, error) {
 	ctx := context.Background()
 	query := `SELECT film_id, title, description, release_year, language_id,
         original_language_id, rental_duration, rental_rate, length, replacement_cost,
@@ -68,12 +69,40 @@ func (r *filmPgRepository) GetById(id int) (domain.Film, error) {
 	)
 
 	if err != nil {
-		return domain.Film{}, err
+		return nil, err
 	}
 
 	if err := json.Unmarshal(specialFeatures, &film.SpecialFeatures); err != nil {
-		return domain.Film{}, err
+		return nil, err
 	}
 
-	return film, nil
+	return &film, nil
+}
+
+func (r *filmPgRepository) GetFilmsWithLanguage() ([]domain.FilmWithLanguage, error) {
+	ctx := context.Background()
+
+	query := `SELECT f.title, l.name
+              FROM film f
+              JOIN language l ON f.language_id = l.language_id`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.FilmWithLanguage
+
+	for rows.Next() {
+		var row domain.FilmWithLanguage
+
+		if err := rows.Scan(&row.Title, &row.LanguageName); err != nil {
+			return nil, err
+		}
+
+		result = append(result, row)
+	}
+
+	return result, nil
 }
