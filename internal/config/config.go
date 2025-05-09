@@ -4,6 +4,8 @@ import (
 	"errors"
 	"github.com/spf13/viper"
 	"log"
+	"path/filepath"
+	"runtime"
 )
 
 type Config struct {
@@ -34,10 +36,13 @@ func parseConfig(v *viper.Viper) (*Config, error) {
 }
 
 func localConfig(fileName string, fileType string) (*viper.Viper, error) {
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Dir(b)
+
 	v := viper.New()
 	v.SetConfigType(fileType)
 	v.SetConfigName(fileName)
-	v.AddConfigPath("/Users/ali/Documents/Projects/go-sample/crud-practice-go/config")
+	v.AddConfigPath(filepath.Join(basePath, "..", "..", "config"))
 	v.AutomaticEnv()
 
 	err := v.ReadInConfig()
