@@ -80,7 +80,7 @@ func (r *filmPgRepository) GetById(id int) (*domain.Film, error) {
 func (r *filmPgRepository) GetFilmsWithLanguage() ([]domain.FilmWithLanguage, error) {
 	ctx := context.Background()
 
-	query := `SELECT f.title, l.name
+	query := `SELECT f.film_id, f.title, l.name
               FROM film f
               JOIN language l ON f.language_id = l.language_id`
 
@@ -95,7 +95,7 @@ func (r *filmPgRepository) GetFilmsWithLanguage() ([]domain.FilmWithLanguage, er
 	for rows.Next() {
 		var row domain.FilmWithLanguage
 
-		if err := rows.Scan(&row.Title, &row.LanguageName); err != nil {
+		if err := rows.Scan(&row.FilmId, &row.Title, &row.LanguageName); err != nil {
 			return nil, err
 		}
 

@@ -3,6 +3,7 @@ package repository_test
 import (
 	"context"
 	appconfig "crud-practice-go/internal/config"
+	"crud-practice-go/internal/domain"
 	"crud-practice-go/internal/repository"
 	"crud-practice-go/internal/search"
 	"crud-practice-go/utils"
@@ -64,19 +65,23 @@ func setupPostgresContainer(ctx context.Context, t *testing.T) (*pgxpool.Pool, f
 	return pool, cleanup, nil
 }
 
-func TestFilmRepository_GetAll(t *testing.T) {
-
+func loadDate(t *testing.T, pool *pgxpool.Pool) {
 	basePath, _ := utils.FindProjectRoot()
 	migrationDir := filepath.Join(basePath, "migrations")
+
+	utils.LoadSQLFile(t, pool, migrationDir, "schema.sql")
+	utils.LoadSQLFile(t, pool, migrationDir, "language.sql")
+	utils.LoadSQLFile(t, pool, migrationDir, "film.sql")
+}
+
+func TestFilmRepository_GetAll(t *testing.T) {
 
 	ctx := context.Background()
 	pool, cleanup, err := setupPostgresContainer(ctx, t)
 	assert.NoError(t, err)
 	defer cleanup()
 
-	utils.LoadSQLFile(t, pool, migrationDir, "schema.sql")
-	utils.LoadSQLFile(t, pool, migrationDir, "language.sql")
-	utils.LoadSQLFile(t, pool, migrationDir, "film.sql")
+	loadDate(t, pool)
 
 	repo := repository.NewFilmRepository(pool)
 
@@ -84,4 +89,31 @@ func TestFilmRepository_GetAll(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, films)
 	require.Equal(t, 3, len(films))
+}
+
+func TestFilmRepository_GetFilmsWithLanguage(t *testing.T) {
+
+	ctx := context.Background()
+	pool, cleanup, err := setupPostgresContainer(ctx, t)
+	assert.NoError(t, err)
+	defer cleanup()
+
+	loadDate(t, pool)
+
+	repo := repository.NewFilmRepository(pool)
+
+	films, err := repo.GetFilmsWithLanguage()
+	require.NoError(t, err)
+	require.NotEmpty(t, films)
+	require.Equal(t, 3, len(films))
+
+	var film domain.FilmWithLanguage
+	for _, f := range films {
+		if f.FilmId == 2 {
+			film = f
+		}
+	}
+	require.NotEmpty(t, film)
+	require.Equal(t, "Inception", film.Title)
+	require.Equal(t, "English", film.LanguageName)
 }

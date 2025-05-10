@@ -29,6 +29,7 @@ type FilmRepository interface {
 }
 
 type FilmWithLanguage struct {
+	FilmId       int
 	Title        string
 	LanguageName string
 }
