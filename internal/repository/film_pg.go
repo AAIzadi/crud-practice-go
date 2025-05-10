@@ -5,6 +5,7 @@ import (
 	"crud-practice-go/internal/domain"
 	"crud-practice-go/internal/search"
 	"encoding/json"
+	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,20 +31,17 @@ func (r *filmPgRepository) GetAll(param search.PagingAndSorting) ([]domain.Film,
 	var films []domain.Film
 	for rows.Next() {
 		var film domain.Film
-		var specialFeatures []byte
 
 		err := rows.Scan(
 			&film.FilmID, &film.Title, &film.Description, &film.ReleaseYear,
 			&film.LanguageID, &film.OriginalLangID, &film.RentalDuration,
 			&film.RentalRate, &film.Length, &film.ReplacementCost,
-			&film.Rating, &film.LastUpdate, &specialFeatures, &film.FullText,
+			&film.Rating, &film.LastUpdate, &film.SpecialFeatures, &film.FullText,
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.New(err.Error())
 		}
-		if err := json.Unmarshal(specialFeatures, &film.SpecialFeatures); err != nil {
-			return nil, err
-		}
+
 		films = append(films, film)
 	}
 

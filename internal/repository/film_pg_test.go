@@ -3,12 +3,15 @@ package repository_test
 import (
 	"context"
 	appconfig "crud-practice-go/internal/config"
+	"crud-practice-go/internal/repository"
+	"crud-practice-go/internal/search"
+	"crud-practice-go/utils"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -27,7 +30,7 @@ func setupPostgresContainer(ctx context.Context, t *testing.T) (*pgxpool.Pool, f
 		postgres.BasicWaitStrategies(),
 	)
 
-	testcontainers.CleanupContainer(t, ctr)
+	//testcontainers.CleanupContainer(t, ctr)
 	require.NoError(t, err)
 
 	connStr, err := ctr.ConnectionString(ctx, "sslmode=disable", "application_name=test")
@@ -63,27 +66,24 @@ func setupPostgresContainer(ctx context.Context, t *testing.T) (*pgxpool.Pool, f
 	return pool, cleanup, nil
 }
 
-func createFilmTable(ctx context.Context, db *pgxpool.Pool, t *testing.T) {
-	_, err := db.Exec(ctx, `
-        CREATE TABLE film (
-            film_id SERIAL PRIMARY KEY,
-            title TEXT,
-            description TEXT,
-            release_year INT,
-            language_id INT,
-            rating TEXT
-        );
-    `)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestFilmRepository_GetAll(t *testing.T) {
+
+	basePath, _ := utils.FindProjectRoot()
+	migrationDir := filepath.Join(basePath, "migrations")
+
 	ctx := context.Background()
 	pool, cleanup, err := setupPostgresContainer(ctx, t)
 	assert.NoError(t, err)
 	defer cleanup()
 
-	createFilmTable(ctx, pool, t)
+	utils.LoadSQLFile(t, pool, migrationDir, "schema.sql")
+	utils.LoadSQLFile(t, pool, migrationDir, "language.sql")
+	utils.LoadSQLFile(t, pool, migrationDir, "film.sql")
+
+	repo := repository.NewFilmRepository(pool)
+
+	films, err := repo.GetAll(search.PagingAndSorting{Limit: 10, Offset: 0})
+	require.NoError(t, err)
+	require.NotEmpty(t, films)
+	require.Equal(t, 3, len(films))
 }
