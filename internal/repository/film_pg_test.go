@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"path/filepath"
 	"testing"
@@ -30,8 +29,6 @@ func setupPostgresContainer(ctx context.Context, t *testing.T) (*pgxpool.Pool, f
 		postgres.WithPassword(postgresConfig.Password),
 		postgres.BasicWaitStrategies(),
 	)
-
-	testcontainers.CleanupContainer(t, ctr)
 	require.NoError(t, err)
 
 	connStr, err := ctr.ConnectionString(ctx, "sslmode=disable", "application_name=test")
